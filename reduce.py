@@ -20,7 +20,9 @@ def mgc_to_sp(mgc, spec_size, fw):
     dtype = mgc.dtype
     mgc = mgc.astype(np.float64)  # required for pysptk
     fftlen = 2*(spec_size - 1)
+    print('starting mgc2sp...')
     sp = np.apply_along_axis(pysptk.mgc2sp, 1, np.atleast_2d(mgc), alpha=fw, gamma=0.0, fftlen=fftlen)
+    print('--finished')
     sp = 20*np.real(sp)/np.log(10)
     if mgc.ndim == 1:
         sp = sp.flatten()
@@ -38,7 +40,7 @@ def mgc_to_mfsc(mgc):
     # re-scale 'dc' and 'nyquist' cepstral bins (see mcep())
     mgc1[:, 0] *= 2
     mgc1[:, ndim-1] *= 2
-    
+
     # fft, truncate, to decibels
     mfsc = np.real(np.fft.fft(mgc1))
     mfsc = mfsc[:, :ndim]
@@ -54,14 +56,14 @@ def sp_to_mfsc(sp, ndim, fw, noise_floor_db=-120.0):
     mgc = sp_to_mgc(sp, ndim, fw, noise_floor_db)
     mfsc = mgc_to_mfsc(mgc)
     return mfsc
-   
+
 def get_warped_freqs(ndim, sr, fw):
     # warped frequencies
     f = np.linspace(0.0, sr/2, ndim)
     w = 2*np.pi*f/sr
     a = -fw  # XXX: why negative?
     w_warped = np.arctan2((1 - a**2)*np.sin(w), (1 + a**2)*np.cos(w) - 2*a)
-    f_warped = w_warped/(2*np.pi)*sr       
+    f_warped = w_warped/(2*np.pi)*sr
     return f_warped
 
 def mfsc_to_mgc(mfsc):
@@ -79,14 +81,14 @@ def mfsc_to_mgc(mfsc):
 
     if is_1d:
         mgc = mgc.flatten()
-    
+
     return mgc
 
 def mfsc_to_sp(mfsc, f_warped, spec_size, sr):
     # reconstruct sp by interpolation
     # alternative is mfsc_to_mgc(), mgc_to_sp() which uses SPTK's mgc2sp
     # interpolation is quite accurate if high mfsc dimensionality is used (e.g. 60)
-    
+
     is_1d = mfsc.ndim == 1
     mfsc = np.atleast_2d(mfsc)
     ndim = mfsc.shape[1]
@@ -97,7 +99,7 @@ def mfsc_to_sp(mfsc, f_warped, spec_size, sr):
 
     if is_1d:
         sp = sp.flatten()
-    
+
     return sp
 
 

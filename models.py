@@ -53,7 +53,7 @@ class Model(object):
 
     def load_model(self, sess, log_dir):
         """
-        Load model parameters, for synthesis or re-starting training. 
+        Load model parameters, for synthesis or re-starting training.
         """
         self.init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
         self.saver = tf.train.Saver(max_to_keep= config.max_models_to_keep)
@@ -84,13 +84,13 @@ class Model(object):
         print('epoch %d took (%.3f sec)' % (epoch + 1, duration))
         for key, value in print_dict.items():
             print('{} : {}'.format(key, value))
-            
+
 
 class WGANSing(Model):
 
     def get_optimizers(self):
         """
-        Returns the optimizers for the model, based on the loss functions and the mode. 
+        Returns the optimizers for the model, based on the loss functions and the mode.
         """
 
         self.final_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,scope = 'Final_Model')
@@ -113,7 +113,7 @@ class WGANSing(Model):
 
     def loss_function(self):
         """
-        returns the loss function for the model, based on the mode. 
+        returns the loss function for the model, based on the mode.
         """
 
 
@@ -144,18 +144,18 @@ class WGANSing(Model):
 
     def get_placeholders(self):
         """
-        Returns the placeholders for the model. 
+        Returns the placeholders for the model.
         Depending on the mode, can return placeholders for either just the generator or both the generator and discriminator.
         """
 
         self.output_placeholder = tf.placeholder(tf.float32, shape=(config.batch_size, config.max_phr_len, config.output_features),
-                                           name='output_placeholder')       
+                                           name='output_placeholder')
 
 
         self.phoneme_labels = tf.placeholder(tf.int32, shape=(config.batch_size, config.max_phr_len),
                                         name='phoneme_placeholder')
         self.phone_onehot_labels = tf.one_hot(indices=tf.cast(self.phoneme_labels, tf.int32), depth = config.num_phos)
-        
+
         self.f0_placeholder = tf.placeholder(tf.float32, shape=(config.batch_size, config.max_phr_len, 1),
                                         name='f0_placeholder')
 
@@ -169,7 +169,7 @@ class WGANSing(Model):
 
     def train(self):
         """
-        Function to train the model, and save Tensorboard summary, for N epochs. 
+        Function to train the model, and save Tensorboard summary, for N epochs.
         """
         sess = tf.Session()
 
@@ -282,14 +282,14 @@ class WGANSing(Model):
         for critic_itr in range(n_critic):
             sess.run(self.dis_train_function, feed_dict = feed_dict)
             sess.run(self.clip_discriminator_var_op, feed_dict = feed_dict)
-            
+
         _, final_loss, dis_loss = sess.run([self.final_train_function,self.final_loss, self.D_loss], feed_dict=feed_dict)
 
         summary_str = sess.run(self.summary, feed_dict=feed_dict)
 
 
         return final_loss, dis_loss, summary_str
- 
+
 
     def validate_model(self,feats_targs, f0_out, pho_targs,targets_singers, sess):
         """
@@ -297,7 +297,7 @@ class WGANSing(Model):
         """
         # assert (np.argmax(singer_targs, axis = -1)<4).all()
         feed_dict = {self.output_placeholder: feats_targs[:,:,:-2], self.f0_placeholder: f0_out,self.phoneme_labels: pho_targs, self.singer_labels:targets_singers,  self.is_train: False}
-            
+
         final_loss, dis_loss = sess.run([self.final_loss, self.D_loss], feed_dict=feed_dict)
 
         summary_str = sess.run(self.summary, feed_dict=feed_dict)
@@ -347,26 +347,347 @@ class WGANSing(Model):
         self.load_model(sess, log_dir = config.log_dir)
         feats, f0_nor, pho_target = self.read_hdf5_file(file_name)
 
+        if 1:
+            # JRS
+            pho_target[:] = 8# "ah"
+            #myPhones = ['dh', 'ah', 'ao', 's', 't', 'r', 'ey', 'l', 'y', 'ah', 'n', 'ih', 'n', 's', 't', 'ih', 't', 'uw', 't', 'f', 'ao', 'r', 'm', 'ah', 'sh', 'iy', 'n', 'l', 'er', 'n', 'ih', 'ng', 'ah', 'n', 'd', 's', 'ay', 'ah', 'f', 'er', 'l', 'er', 'ih', 'n', 's', 't', 'ih', 't', 'uw', 't', 'ae', 't', 'dh', 'ah', 'y', 'uw', 'n', 'ah', 'v', 'er', 's', 'ah', 't', 'iy', 'ah', 'v', 'ae', 'd', 'ah', 'l', 'ey', 'd', 'ah', 'n', 'aw', 'n', 's', 'n', 'uw', 'ih', 'n', 'ih', 'sh', 'ah', 't', 'ih', 'v', 'z', 't', 'uw', 's', 'ah', 'p', 'ao', 'r', 't', 'g', 'r', 'aw', 'n', 'd', 'b', 'r', 'ey', 'k', 'ih', 'ng', 'eh', 'k', 's', 'p', 'l', 'er', 'ey', 'sh', 'ah', 'n', 'z', 'ae', 't', 'dh', 'ah', 'ih', 'n', 't', 'er', 's', 'eh', 'k', 'sh', 'ah', 'n', 'ah', 'v', 'aa', 'r', 't', 'ah', 'n', 'd', 'aa', 'r', 't', 'ah', 'f', 'ih', 'sh', 'ah', 'l', 'ih', 'n', 't', 'eh', 'l', 'ah', 'jh', 'ah', 'n', 's', 'sil',  'dh', 'ah', 's', 'eh', 'n', 't', 'er', 'p', 'iy', 's', 'ah', 'v', 'dh', 'ah', 'n', 'uw', 'ih', 'n', 'ih', 'sh', 'ah', 't', 'ih', 'v', 'z', 'ih', 'z', 'ae', 'n', 'aa', 'r', 't', 'ih', 's', 't', 'ih', 'k', 'r', 'iy', 's', 'er', 'ch', 'p', 'l', 'ae', 't', 'f', 'ao', 'r', 'm', 'ah', 'n', 'd', 'g', 'ae', 'l', 'er', 'iy', 'ih', 'n', 'v', 'ay', 'r', 'ah', 'n', 'm', 'ah', 'n', 't', 'dh', 'ae', 't', 'p', 'eh', 'r', 'z', 'w', 'er', 'l', 'd', 'k', 'l', 'ae', 's', 'ay', 'ah', 'n', 'd', 'm', 'ah', 'sh', 'iy', 'n', 'l', 'er', 'n', 'ih', 'ng', 'eh', 'n', 'jh', 'ah', 'n', 'ih', 'r', 'z', 'w', 'ih', 'dh', 'l', 'iy', 'd', 'ih', 'ng', 'aa', 'r', 't', 'ih', 's', 't', 'sp',]
+
+            singer_index = 1
+
+            # with spaces
+            myPhones = ['dh', 'ah', 'sp',
+	'ao', 's', 't', 'r', 'ey', 'l', 'y', 'ah', 'n', 'sp',
+	'ih', 'n', 's', 't', 'ih', 't', 'uw', 't', 'sp',
+	'f', 'ao', 'r', 'sp',
+	'm', 'ah', 'sh', 'iy', 'n', 'sp',
+	'l', 'er', 'n', 'ih', 'ng', 'sp',
+	'ah', 'n', 'd', 'sp',
+	's', 'ay', 'ah', 'sp',
+	'f', 'er', 'l', 'er', 'sp',
+	'ih', 'n', 's', 't', 'ih', 't', 'uw', 't', 'sp',
+	'ae', 't', 'sp',
+	'dh', 'ah', 'sp',
+	'y', 'uw', 'n', 'ah', 'v', 'er', 's', 'ah', 't', 'iy', 'sp',
+	'ah', 'v', 'sp',
+	'ae', 'd', 'ah', 'l', 'ey', 'd', 'sp',
+	'ah', 'n', 'aw', 'n', 's', 'sp',
+	'n', 'uw', 'sp',
+	'ih', 'n', 'ih', 'sh', 'ah', 't', 'ih', 'v', 'z', 'sp',
+	't', 'uw', 'sp',
+	's', 'ah', 'p', 'ao', 'r', 't', 'sp',
+	'g', 'r', 'aw', 'n', 'd', 'b', 'r', 'ey', 'k', 'ih', 'ng', 'sp',
+	'eh', 'k', 's', 'p', 'l', 'er', 'ey', 'sh', 'ah', 'n', 'z', 'sp',
+	'ae', 't', 'sp',
+	'dh', 'ah', 'sp',
+	'ih', 'n', 't', 'er', 's', 'eh', 'k', 'sh', 'ah', 'n', 'sp',
+	'ah', 'v', 'sp',
+	'aa', 'r', 't', 'sp',
+	'ah', 'n', 'd', 'sp',
+	'aa', 'r', 't', 'ah', 'f', 'ih', 'sh', 'ah', 'l', 'sp',
+	'ih', 'n', 't', 'eh', 'l', 'ah', 'jh', 'ah', 'n', 's', 'sp',
+	'dh', 'ah', 'sp',
+	's', 'eh', 'n', 't', 'er', 'p', 'iy', 's', 'sp',
+	'ah', 'v', 'sp',
+	'dh', 'ah', 'sp',
+	'n', 'uw', 'sp',
+	'ih', 'n', 'ih', 'sh', 'ah', 't', 'ih', 'v', 'z', 'sp',
+	'ih', 'z', 'sp',
+	'ae', 'n', 'sp',
+	'aa', 'r', 't', 'ih', 's', 't', 'ih', 'k', 'sp',
+	'r', 'iy', 's', 'er', 'ch', 'sp',
+	'p', 'l', 'ae', 't', 'f', 'ao', 'r', 'm', 'sp',
+	'ah', 'n', 'd', 'sp',
+	'g', 'ae', 'l', 'er', 'iy', 'sp',
+	'ih', 'n', 'v', 'ay', 'r', 'ah', 'n', 'm', 'ah', 'n', 't', 'sp',
+	'dh', 'ae', 't', 'sp',
+	'p', 'eh', 'r', 'z', 'sp',
+	'w', 'er', 'l', 'd', 'sp',
+	'k', 'l', 'ae', 's', 'sp',
+	'ay', 'sp',
+	'ah', 'n', 'd', 'sp',
+	'm', 'ah', 'sh', 'iy', 'n', 'sp',
+	'l', 'er', 'n', 'ih', 'ng', 'sp',
+	'eh', 'n', 'jh', 'ah', 'n', 'ih', 'r', 'z', 'sp',
+	'w', 'ih', 'dh', 'sp',
+	'l', 'iy', 'd', 'ih', 'ng', 'sp',
+	'aa', 'r', 't', 'ih', 's', 't', 's', ]
+
+            # cowboy song
+            myPhones =  ['hh', 'ae', 'n', 's', 'ah', 'm', 'sp',
+'m', 'eh', 'n', 'sp',
+'w', 'ih', 'dh', 'sp',
+'k', 'aw', 'b', 'oy', 'sp',
+'hh', 'ae', 't', 's', 'sp',
+ 'sp',
+'m', 'ey', 'd', 'sp',
+'f', 'ey', 's', 'ah', 'z', 'sp',
+'ah', 'n', 'd', 'sp',
+'k', 'ae', 's', 't', 'sp',
+'sh', 'ae', 'd', 'ow', 'z', 'sp',
+ 'sp',
+'g', 'uh', 'd', 'sp',
+'ow', 'l', 'd', 'sp',
+'k', 'aw', 'b', 'oy', 'sp',
+'b', 'uw', 't', 's', 'sp',
+ 'sp',
+'ah', 'n', 'd', 'sp',
+'ah', 'sp',
+'s', 't', 'r', 'ao', 'sp',
+'hh', 'ae', 't', 'sp',
+'sh', 'iy', 'sp',
+'n', 'eh', 'v', 'er', 'sp',
+'w', 'ao', 'r', 'sp',
+ 'sp',
+'Sil', 'sp',
+ 'sp',
+'k', 'iy', 'p', 'sp',
+'aa', 'n', 'sp',
+'r', 'ah', 'n', 'ih', 'ng', 'sp',
+'er', 'aw', 'n', 'd', 'sp',
+'w', 'ih', 'dh', 'sp',
+'k', 'aw', 'b', 'oy', 'sp',
+'b', 'uw', 't', 's', 'sp',
+'aa', 'n', 'sp',
+ 'sp',
+'r', 'ah', 'n', 'ih', 'ng', 'sp',
+'er', 'aw', 'n', 'd', 'sp',
+'w', 'ih', 'dh', 'sp',
+'dh', 'ow', 'z', 'sp',
+ 'sp',
+'Sil', 'sp',
+ 'sp',
+'dh', 'ah', 'sp',
+'eh', 'r', 'sp',
+'w', 'aa', 'z', 'sp',
+'f', 'uh', 'l', 'sp',
+'ah', 'v', 'sp',
+'l', 'ah', 'k', 'sp',
+'ah', 'n', 'd', 'sp',
+'d', 'ey', 'n', 'jh', 'er', 'sp',
+ 'sp',
+'w', 'ah', 'n', 'sp',
+'y', 'ah', 'ng', 'sp',
+'k', 'aw', 'b', 'oy', 'sp',
+'t', 'uw', 'sp',
+'t', 'ey', 'k', 'sp',
+'ih', 't', 'sp',
+'ih', 'n', 'sp',
+'s', 't', 'r', 'ay', 'd', 'sp',
+ 'sp',
+'t', 'uw', 'sp',
+'g', 'eh', 't', 'sp',
+'ah', 'p', 'sp',
+'t', 'uw', 'sp',
+'dh', 'ah', 'sp',
+'t', 'aa', 'p', 'sp',
+'ah', 'n', 'd', 'sp',
+'n', 'eh', 'v', 'er', 'sp',
+'k', 'ah', 'm', 'sp',
+'b', 'ae', 'k', 'sp',
+'d', 'aw', 'n', 'sp',
+ 'sp',
+'y', 'uw', 'sp',
+'n', 'ow', 'sp',
+'dh', 'ae', 't', 'sp',
+'ay', 'sp',
+'eh', 'v', 'er', 'sp',
+'b', 'iy', 'sp',
+'y', 'ao', 'r', 'sp',
+'b', 'l', 'ay', 'n', 'd', 'sp',
+'k', 'aw', 'b', 'oy', 'sp',
+ 'sp',
+'Sil', 'sp',
+ 'sp',
+'ay', 'sp',
+'hh', 'er', 'd', 'sp',
+'dh', 'ih', 's', 'sp',
+'s', 'ao', 'ng', 'sp',
+'b', 'ih', 'f', 'ao', 'r', 'sp',
+ 'sp',
+'w', 'ah', 'n', 'sp',
+'n', 'ay', 't', 'sp',
+'ih', 'n', 'sp',
+'ah', 'sp',
+'s', 'm', 'ao', 'l', 'sp',
+'b', 'aa', 'r', 'sp',
+ 'sp',
+'m', 'ay', 'sp',
+'r', 'ow', 'l', 'ih', 'ng', 'sp',
+'s', 't', 'ow', 'n', 'z', 'sp',
+'k', 'aw', 'b', 'oy', 'sp',
+ 'sp',
+'w', 'eh', 'n', 'sp',
+'hh', 'iy', 'sp',
+'s', 'ae', 'ng', 'sp',
+'ah', 'b', 'aw', 't', 'sp',
+'dh', 'ah', 'sp',
+'b', 'l', 'ae', 'ng', 'k', 'sp',
+'g', 'er', 'l', 'z', 'sp',
+'ah', 'n', 'd', 'sp',
+'m', 'uw', 'n', 'sp',
+ 'sp',
+'Sil', 'sp',
+ 'sp',
+'ah', 'sp',
+'k', 'aw', 'b', 'oy', 'sp',
+'w', 'aa', 'z', 'sp',
+'ao', 'l', 'sp',
+'dh', 'ae', 't', 'sp',
+'ay', 'sp',
+'hh', 'ae', 'd', 'sp',
+ 'sp',
+'sh', 'iy', 'sp',
+'hh', 'ae', 'd', 'sp',
+'ah', 'sp',
+'f', 'r', 'aw', 'n', 'sp',
+'ah', 'n', 'd', 'sp',
+'ah', 'sp',
+'d', 'r', 'iy', 'm', 'sp',
+'t', 'uw', 'sp',
+ 'sp',
+'Sil', 'sp',
+ 'sp',
+'dh', 'ah', 'sp',
+'eh', 'r', 'sp',
+'w', 'aa', 'z', 'sp',
+'f', 'uh', 'l', 'sp',
+'ah', 'v', 'sp',
+'l', 'ah', 'k', 'sp',
+'ah', 'n', 'd', 'sp',
+'d', 'ey', 'n', 'jh', 'er', 'sp',
+ 'sp',
+'w', 'ah', 'n', 'sp',
+'y', 'ah', 'ng', 'sp',
+'k', 'aw', 'b', 'oy', 'sp',
+'t', 'uw', 'sp',
+'t', 'ey', 'k', 'sp',
+'ih', 't', 'sp',
+'ih', 'n', 'sp',
+'s', 't', 'r', 'ay', 'd', 'sp',
+ 'sp',
+'t', 'uw', 'sp',
+'g', 'eh', 't', 'sp',
+'ah', 'p', 'sp',
+'t', 'uw', 'sp',
+'dh', 'ah', 'sp',
+'t', 'aa', 'p', 'sp',
+'ah', 'n', 'd', 'sp',
+'n', 'eh', 'v', 'er', 'sp',
+'k', 'ah', 'm', 'sp',
+'b', 'ae', 'k', 'sp',
+'d', 'aw', 'n', 'sp',
+ 'sp',
+'y', 'uw', 'sp',
+'n', 'ow', 'sp',
+'dh', 'ae', 't', 'sp',
+'ay', 'sp',
+'eh', 'v', 'er', 'sp',
+'b', 'iy', 'sp',
+'y', 'ao', 'r', 'sp',
+'b', 'l', 'ay', 'n', 'd', 'sp',
+'k', 'aw', 'b', 'oy', 'sp',
+ 'sp',
+'Sil', 'sp',
+ 'sp',
+'t', 'ay', 'm', 'sp',
+'ih', 'z', 'sp',
+'b', 'iy', 'ih', 'ng', 'sp',
+'s', 'w', 'eh', 'p', 't', 'sp',
+'aw', 't', 'sp',
+'w', 'ih', 'dh', 'sp',
+'dh', 'ah', 'sp',
+'t', 'ay', 'd', 'sp',
+ 'sp',
+'l', 'ih', 's', 'ah', 'n', 'sp',
+'y', 'uw', 'sp',
+'ow', 'l', 'd', 'sp',
+'k', 'aw', 'b', 'oy', 'sp',
+'l', 'ih', 's', 'ah', 'n', 'sp',
+'f', 'ao', 'r', 'sp',
+ 'sp',
+'Sil', 'sp',
+ 'sp',
+'dh', 'ah', 'sp',
+'eh', 'r', 'sp',
+'w', 'aa', 'z', 'sp',
+'f', 'uh', 'l', 'sp',
+'ah', 'v', 'sp',
+'l', 'ah', 'k', 'sp',
+'ah', 'n', 'd', 'sp',
+'d', 'ey', 'n', 'jh', 'er', 'sp',
+ 'sp',
+'w', 'ah', 'n', 'sp',
+'y', 'ah', 'ng', 'sp',
+'k', 'aw', 'b', 'oy', 'sp',
+'t', 'uw', 'sp',
+'t', 'ey', 'k', 'sp',
+'ih', 't', 'sp',
+'ih', 'n', 'sp',
+'s', 't', 'r', 'ay', 'd', 'sp',
+ 'sp',
+'t', 'uw', 'sp',
+'g', 'eh', 't', 'sp',
+'ah', 'p', 'sp',
+'t', 'uw', 'sp',
+'dh', 'ah', 'sp',
+'t', 'aa', 'p', 'sp',
+'ah', 'n', 'd', 'sp',
+'n', 'eh', 'v', 'er', 'sp',
+'k', 'ah', 'm', 'sp',
+'b', 'ae', 'k', 'sp',
+'d', 'aw', 'n', 'sp',
+ 'sp',
+'y', 'uw', 'sp',
+'n', 'ow', 'sp',
+'dh', 'ae', 't', 'sp',
+'ay', 'sp',
+'eh', 'v', 'er', 'sp',
+'b', 'iy', 'sp',
+'y', 'ao', 'r', 'sp',
+'b', 'l', 'ay', 'n', 'd', 'sp',
+'k', 'aw', 'b', 'oy', ]
+
+            myPhoneInds = []
+            # look these up in config.phonemas_nus
+            for ph in myPhones:
+                try:
+                    idx = config.phonemas_nus.index(ph)
+                except ValueError:
+                    print('phoneme {} not found'.format(ph))
+                    idx = config.phonemas_nus.index('sp')
+                # Append 0.35 secs worth. seems to be 172 of these samples per second.
+                n = int(0.22*172)
+                myPhoneInds.extend([idx]*n)
+            # Now we have an over-long list of phonemes.  STick them in.
+            print('len myPhoneInds = {}'.format(len(myPhoneInds)))
+            # Repeat it to make sure long enough.
+            myPhoneInds.extend(myPhoneInds)
+            pho_target[:] = myPhoneInds[:len(pho_target)]
+
         out_feats = self.process_file(f0_nor, pho_target, singer_index,  sess)
 
         self.plot_features(feats, out_feats)
 
-        synth = utils.query_yes_no("Synthesize output? ")
+        synth = True #!! utils.query_yes_no("Synthesize output? ")
 
         if synth:
 
-            out_featss = np.concatenate((out_feats[:feats.shape[0]], feats[:out_feats.shape[0],-2:]), axis = -1)
+            print('\n** GPU available returns {}\n'.format( tf.test.is_gpu_available() ))
+            x = tf.test.gpu_device_name()
+            print('\n** Training with device: {}.\n'.format(x))
 
-            utils.feats_to_audio(out_featss,file_name[:-4]+'output') 
-        synth_ori = utils.query_yes_no("Synthesize gorund truth with vocoder? ")
+            out_featss = np.concatenate((out_feats[:feats.shape[0]], feats[:out_feats.shape[0],-2:]), axis = -1)
+            print('out_feats shape = {}, feats shape = {}, out_featss shape = {}'.format(out_feats.shape, feats.shape, out_featss.shape))
+            utils.feats_to_audio(out_featss,file_name[:-4]+'output')
+        synth_ori = False #!! utils.query_yes_no("Synthesize gorund truth with vocoder? ")
 
         if synth_ori:
-            utils.feats_to_audio(feats,file_name[:-4]+'ground_truth') 
+            utils.feats_to_audio(feats,file_name[:-4]+'ground_truth')
 
     def plot_features(self, feats, out_feats):
 
         plt.figure(1)
-        
+
         ax1 = plt.subplot(211)
 
         plt.imshow(feats[:,:-2].T,aspect='auto',origin='lower')
@@ -379,18 +700,28 @@ class WGANSing(Model):
 
         plt.imshow(out_feats.T,aspect='auto',origin='lower')
 
-
-        plt.show()
+        plt.waitforbuttonpress(0.001)
+        #plt.show()
 
 
     def process_file(self,f0_nor, pho_target, singer_index,  sess):
-
+        print('models:process_file, f0 shape = {}, pho shape = {}, singer = {}'.format(f0_nor.shape, pho_target.shape, singer_index))
+        if 0:
+            plt.figure()
+            plt.plot(f0_nor)
+            plt.title('f0')
+            plt.waitforbuttonpress()
+            plt.figure()
+            plt.plot(pho_target)
+            plt.title('pho')
+            plt.waitforbuttonpress()
         stat_file = h5py.File(config.stat_dir+'stats.hdf5', mode='r')
 
         max_feat = np.array(stat_file["feats_maximus"])
         min_feat = np.array(stat_file["feats_minimus"])
         stat_file.close()
-
+        print('max_feat = {}'.format(max_feat))
+        print('min_feat = {}'.format(min_feat))
 
 
         in_batches_f0, nchunks_in = utils.generate_overlapadd(np.expand_dims(f0_nor, -1))
@@ -402,13 +733,13 @@ class WGANSing(Model):
 
         out_batches_feats = []
 
-
+        print('doing nn inference...')
         for in_batch_f0, in_batch_pho in zip(in_batches_f0, in_batches_pho) :
             speaker = np.repeat(singer_index, config.batch_size)
             feed_dict = { self.f0_placeholder: in_batch_f0,self.phoneme_labels: in_batch_pho, self.singer_labels:speaker, self.is_train: False}
             out_feats = sess.run(self.output, feed_dict=feed_dict)
             out_batches_feats.append(out_feats)
-
+        print('  -done')
         out_batches_feats = np.array(out_batches_feats)
 
         out_batches_feats = utils.overlapadd(out_batches_feats,nchunks_in)
@@ -416,7 +747,7 @@ class WGANSing(Model):
         out_batches_feats = out_batches_feats/2+0.5
 
         out_batches_feats = out_batches_feats*(max_feat[:-2] - min_feat[:-2]) + min_feat[:-2]
-
+        print('process_file: finished.  out_batches_feats shape = {}'.format(out_batches_feats.shape))
         return out_batches_feats
 
 
@@ -433,7 +764,7 @@ class WGANSing(Model):
             self.output = modules.full_network(self.phone_onehot_labels, self.f0_placeholder, self.singer_onehot_labels, self.is_train)
             # self.output_decoded = tf.nn.sigmoid(self.output)
             # self.output_wav_decoded = tf.nn.sigmoid(self.output_wav)
-        with tf.variable_scope('Discriminator') as scope: 
+        with tf.variable_scope('Discriminator') as scope:
             self.D_real = modules.discriminator((self.output_placeholder-0.5)*2, self.phone_onehot_labels, self.f0_placeholder, self.singer_onehot_labels, self.is_train)
             scope.reuse_variables()
             self.D_fake = modules.discriminator(self.output, self.phone_onehot_labels, self.f0_placeholder, self.singer_onehot_labels, self.is_train)
@@ -450,8 +781,3 @@ def test():
 
 if __name__ == '__main__':
     test()
-
-
-
-
-

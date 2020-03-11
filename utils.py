@@ -5,6 +5,7 @@ import csv
 import soundfile as sf
 import numpy as np
 from scipy.stats import norm
+#import pyworld-jamie as pw
 import pyworld as pw
 import matplotlib.pyplot as plt
 from reduce import sp_to_mfsc, mfsc_to_sp, ap_to_wbap,wbap_to_ap, get_warped_freqs, sp_to_mgc, mgc_to_sp, mgc_to_mfsc, mfsc_to_mgc
@@ -54,9 +55,9 @@ def stft(data, window=np.hanning(1024),
     """
     X, F, N = stft(data,window=sinebell(2048),hopsize=1024.0,
                    nfft=2048.0,fs=44100)
-                   
+
     Computes the short time Fourier transform (STFT) of data.
-    
+
     Inputs:
         data                  :
             one-dimensional time-series to be analyzed
@@ -69,7 +70,7 @@ def stft(data, window=np.hanning(1024),
             (the user has to provide an even number)
         fs=44100.0            :
             sampling rate of the signal
-        
+
     Outputs:
         X                     :
             STFT of data
@@ -79,12 +80,12 @@ def stft(data, window=np.hanning(1024),
             central time at the middle of each analysis
             window
     """
-    
+
     # window defines the size of the analysis windows
     lengthWindow = window.size
-    
+
     lengthData = data.size
-    
+
     # should be the number of frames by YAAFE:
     numberFrames = np.ceil(lengthData / np.double(hopsize)) + 2
     # to ensure that the data array s big enough,
@@ -92,7 +93,7 @@ def stft(data, window=np.hanning(1024),
     newLengthData = (numberFrames-1) * hopsize + lengthWindow
 
     # import pdb;pdb.set_trace()
-    
+
     # !!! adding zeros to the beginning of data, such that the first window is
     # centered on the first sample of data
 
@@ -100,28 +101,28 @@ def stft(data, window=np.hanning(1024),
     if len(data.shape)>1:
         data = np.mean(data, axis = -1)
     data = np.concatenate((np.zeros(int(lengthWindow/2)), data))
-    
+
     # zero-padding data such that it holds an exact number of frames
 
     data = np.concatenate((data, np.zeros(int(newLengthData - data.size))))
-    
+
     # the output STFT has nfft/2+1 rows. Note that nfft has to be an even
     # number (and a power of 2 for the fft to be fast)
     numberFrequencies = nfft / 2 + 1
-    
+
     STFT = np.zeros([int(numberFrames), int(numberFrequencies)], dtype=complex)
-    
+
     # storing FT of each frame in STFT:
     for n in np.arange(numberFrames):
         beginFrame = n*hopsize
         endFrame = beginFrame+lengthWindow
         frameToProcess = window*data[int(beginFrame):int(endFrame)]
         STFT[int(n),:] = np.fft.rfft(frameToProcess, np.int32(nfft), norm="ortho")
-        
+
     # frequency and time stamps:
     F = np.arange(numberFrequencies)/np.double(nfft)*fs
     N = np.arange(numberFrames)*hopsize/np.double(fs)
-    
+
     return STFT
 
 def istft(mag, phase, window=np.hanning(1024),
@@ -214,12 +215,12 @@ def file_to_stft(input_file, mode =0):
     if mode == 0 :
         mixture = (audio[:,0]+audio[:,1])*0.7
         mix_stft=abs(stft(mixture))
-    
+
         return mix_stft
     elif mode ==1:
         mixture = audio
         mix_stft=abs(stft(mixture))
-    
+
         return mix_stft
     elif mode ==2:
         mixture = audio[:,0]
@@ -285,7 +286,7 @@ def stft_to_feats(vocals, fs, mode=config.comp_mode):
     # import pdb;pdb.set_trace()
 
 
-    out_feats=np.concatenate((harmy,apy,y.reshape((-1,2))),axis=1) 
+    out_feats=np.concatenate((harmy,apy,y.reshape((-1,2))),axis=1)
 
     # harm_in=mgc_to_sp(harmy, 1025, 0.45)
     # ap_in=mgc_to_sp(apy, 1025, 0.45)
@@ -350,6 +351,11 @@ def new_base_to_hertz(f0):
 def feats_to_audio(in_feats,filename, fs=config.fs,  mode=config.comp_mode):
     harm = in_feats[:,:60]
     ap = in_feats[:,60:-2]
+    if 0:
+        plt.figure()
+        plt.plot(ap)
+        plt.title('aperiodicity')
+        plt.waitforbuttonpress()
     f0 = in_feats[:,-2:]
     # f0[:,0] = f0[:,0]-69
     # f0[:,0] = f0[:,0]/12
@@ -415,21 +421,21 @@ def generate_overlapadd(allmix,time_context=config.max_phr_len, overlap=config.m
     input_size = allmix.shape[-1]
 
     i=0
-    start=0  
+    start=0
     while (start + time_context) < allmix.shape[0]:
         i = i + 1
-        start = start - overlap + time_context 
+        start = start - overlap + time_context
     fbatch = np.zeros([int(np.ceil(float(i)/batch_size)),batch_size,time_context,input_size])+1e-10
-    
-    
+
+
     i=0
-    start=0  
+    start=0
 
     while (start + time_context) < allmix.shape[0]:
         fbatch[int(i/batch_size),int(i%batch_size),:,:]=allmix[int(start):int(start+time_context),:]
         i = i + 1 #index for each block
         start = start - overlap + time_context #starting point for each block
-    
+
     return fbatch,i
 
 def overlapadd(fbatch,nchunks,overlap=int(config.max_phr_len/2)):
@@ -445,13 +451,13 @@ def overlapadd(fbatch,nchunks,overlap=int(config.max_phr_len/2)):
     #time_context = net.network.find('hid2', 'hh').size
     # input_size = net.layers[0].size  #input_size is the number of spectral bins in the fft
     window = np.repeat(np.expand_dims(window, axis=1),input_size,axis=1)
-    
+
 
     sep = np.zeros((int(nchunks*(time_context-overlap)+time_context),input_size))
 
-    
+
     i=0
-    start=0 
+    start=0
     while i < nchunks:
         #import pdb;pdb.set_trace()
         s = fbatch[int(i/batch_size),int(i%batch_size),:,:]
@@ -467,7 +473,7 @@ def overlapadd(fbatch,nchunks,overlap=int(config.max_phr_len/2)):
             sep[start:int(start+overlap)] = window[overlap:]*sep[start:int(start+overlap)] + window[:overlap]*s[:overlap]
         i = i + 1 #index for each block
         start = int(start - overlap + time_context) #starting point for each block
-    return sep  
+    return sep
 
 
 def normalize(inputs, feat, mode=config.norm_mode_in):
@@ -542,7 +548,7 @@ def query_yes_no(question, default="yes"):
 
 
 def match_time(feat_list):
-    """ 
+    """
     Matches the shape across the time dimension of a list of arrays.
     Assumes that the first dimension is in time, preserves the other dimensions
     """

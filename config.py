@@ -2,10 +2,10 @@ import numpy as np
 import tensorflow as tf
 
 
-wav_dir_nus = '../datasets/nus-smc-corpus_48/'
+wav_dir_nus = './nus-smc-corpus_48/'
 
 
-voice_dir = '../ss_synthesis/voice/'
+voice_dir = './voice/'
 
 
 log_dir = './log/'
@@ -113,7 +113,7 @@ wavenet_filters = 64
 
 print_every = 1
 save_every = 50
-validate_every = 20 
+validate_every = 20
 
 use_gan = False
 gan_lr = 0.001
